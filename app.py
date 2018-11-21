@@ -111,6 +111,9 @@ class AppointmentListAPI(Resource):
     # check doctor exists
     if not doctor_id in [d['id'] for d in doctors]:
       return {'error': 'Doctor does not exist'}, 400
+    # check if starts at 15 minute intervals
+    if not date.minute in [0, 15, 30, 45]:
+      return {'error': 'New appointments can only start at 15 minute intervals'}, 400
     appointment = {
       'id': doctor_id,
       'first_name': args['first_name'],
