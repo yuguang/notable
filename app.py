@@ -37,7 +37,7 @@ appointments = [
     'last_name': 'Archer',
     'time': datetime.now().replace(tzinfo=utc),
     'kind': NEW_PATIENT,
-    'doctor': 1
+    'doctor_id': 1
   },
   {
     'id': 2,
@@ -45,7 +45,7 @@ appointments = [
     'last_name': 'Kane',
     'time': datetime.now().replace(tzinfo=utc),
     'kind': NEW_PATIENT,
-    'doctor': 2
+    'doctor_id': 2
   }
 ]
 
@@ -92,12 +92,22 @@ class AppointmentListAPI(Resource):
     ret = []
     for appointment in appointments:
       # get the doctor's appointments and check if the time for the appointment falls on the day
-      if (appointment['id'] == doctor_id and
+      if (appointment['doctor_id'] == doctor_id and
           appointment['time'] > date and
           appointment['time'] <= date + timedelta(days=1)):
         ret.append(marshal(appointment, appointment_fields))
 
     return {'appointments': ret}
+
+  def get_appointments(self, doctor_id, time):
+    # returns a list of appointments at a specific time
+    ret = []
+    for appointment in appointments:
+      if (appointment['doctor_id'] == doctor_id and
+          appointment['time'] == time):
+        ret.append(appointment)
+    return ret
+
 
   def post(self, doctor_id):
     args = self.reqparse.parse_args()
@@ -115,12 +125,16 @@ class AppointmentListAPI(Resource):
     if not date.minute in [0, 15, 30, 45]:
       return {'error': 'New appointments can only start at 15 minute intervals'}, 400
     appointment = {
-      'id': doctor_id,
+      'id': appointments[-1]['id'] + 1,
+      'doctor_id': doctor_id,
       'first_name': args['first_name'],
       'last_name': args['last_name'],
       'time': date,
       'kind': VISIT_KIND[args['kind']],
     }
+    scheduled_appointments =  self.get_appointments(doctor_id, date)
+    if len(scheduled_appointments) > 2:
+      return {'error': 'No more than 3 can be scheduled at the same time'}, 400
     appointments.append(appointment)
     return {'appointment': marshal(appointment, appointment_fields)}, 201
 
